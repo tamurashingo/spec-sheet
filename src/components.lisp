@@ -153,11 +153,23 @@
         collect prop-kw
         collect (or (getf params prop-kw) (getf (cdr prop-def) :default) "")))
 
+(defun percent-encode (string)
+  "Percent-encode a string for safe use as a URL query parameter value."
+  (with-output-to-string (out)
+    (loop for char across (or string "")
+          for code = (char-code char)
+          do (if (or (and (>= code 65) (<= code 90))
+                     (and (>= code 97) (<= code 122))
+                     (and (>= code 48) (<= code 57))
+                     (member char '(#\- #\_ #\. #\~)))
+                 (write-char char out)
+                 (format out "%~2,'0X" code)))))
+
 (defun plist-to-query-string (plist)
   "Convert a plist to a URL query string fragment, e.g. '&default=sbcl&mode=single'."
   (with-output-to-string (out)
     (loop for (k v) on plist by #'cddr
-          do (format out "&~(~A~)=~A" k (or v "")))))
+          do (format out "&~(~A~)=~A" k (percent-encode (or v ""))))))
 
 (defun invoke-spec-render-sexp (spec params)
   "Call SPEC's render-fn with PARAMS (a keyword plist). Returns an S-expression.
