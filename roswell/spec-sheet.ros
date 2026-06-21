@@ -1,0 +1,74 @@
+#!/bin/sh
+#|-*- mode:lisp -*-|#
+#|
+exec ros -Q -- $0 "$@"
+|#
+(progn
+  (ros:ensure-asdf)
+  #+quicklisp (ql:quickload '(:spec-sheet) :silent t))
+
+(defpackage :ros.script.spec-sheet.3991015627
+  (:use :cl))
+
+(in-package :ros.script.spec-sheet.3991015627)
+
+(defun usage ()
+  (format t "Usage: spec-sheet [--port PORT] FILE [FILE ...]
+
+  FILE    A spec loader file (.lisp) that loads defspec/defsheet definitions.
+          Multiple files are loaded in the given order.
+
+Options:
+  -p, --port PORT   Port number to listen on (default: 5000)
+  -h, --help        Show this help
+
+Example:
+  spec-sheet ./src/spec-loader.lisp
+  spec-sheet --port 8080 ./src/spec-loader.lisp
+  spec-sheet ./src/components.lisp ./src/layouts.lisp
+"))
+
+(defun parse-args (argv)
+  (let ((port  nil)
+        (files nil))
+    (loop while argv do
+      (let ((arg (pop argv)))
+        (cond
+          ((or (string= arg "--port") (string= arg "-p"))
+           (let ((val (pop argv)))
+             (unless val
+               (format *error-output* "Error: ~A requires a value~%" arg)
+               (ros:quit 1))
+             (handler-case
+                 (setf port (parse-integer val))
+               (error ()
+                 (format *error-output* "Error: invalid port number: ~A~%" val)
+                 (ros:quit 1)))))
+          ((or (string= arg "--help") (string= arg "-h"))
+           (usage)
+           (ros:quit 0))
+          ((and (> (length arg) 0) (char= (char arg 0) #\-))
+           (format *error-output* "Error: unknown option: ~A~%" arg)
+           (ros:quit 1))
+          (t
+           (push arg files)))))
+    (values port (nreverse files))))
+
+(defun main (&rest argv)
+  (multiple-value-bind (port files) (parse-args argv)
+    (unless files
+      (usage)
+      (ros:quit 1))
+
+    (dolist (path files)
+      (let ((probe (probe-file path)))
+        (unless probe
+          (format *error-output* "Error: path not found: ~A~%" path)
+          (ros:quit 1))
+        (spec-sheet:load-spec-file probe)))
+
+    (spec-sheet:configure-spec-sheet)
+
+    (apply #'cl-s3r.server:run-server
+           (when port (list :port port)))))
+;;; vim: set ft=lisp lisp:
