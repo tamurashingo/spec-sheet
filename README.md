@@ -4,6 +4,8 @@ A [Storybook](https://storybook.js.org/)-like developer tool for [cl-s3r](https:
 
 Define component specifications with `defspec` and parameter variations with `defsheet`, then browse them in a live two-panel UI — sidebar on the left, interactive preview on the right. A built-in **Playground** lets you freely edit any prop and see the result immediately.
 
+![screenshot](image/screenshot.png)
+
 ## Features
 
 - **Declarative specs** — describe a component's props and a render template with `defspec`
