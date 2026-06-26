@@ -16,6 +16,7 @@
   spec-name     ; symbol
   sheet-name    ; symbol
   title         ; string
+  render-fn     ; lambda (&key ...) => S-expression, or nil to use spec's render-fn
   params)       ; plist e.g. '(:default "sbcl")
 
 (defvar *spec-registry* nil
@@ -61,7 +62,7 @@
                                              :props props
                                              :sheets nil)))))))
 
-(defun %register-sheet (spec-name sheet-name title params)
+(defun %register-sheet (spec-name sheet-name title render params)
   (let ((spec (find (string-downcase (string spec-name)) *spec-registry*
                     :key (lambda (s) (string-downcase (string (spec-entry-name s))))
                     :test #'string=)))
@@ -73,14 +74,16 @@
                           :test #'string=)))
       (if existing
           ;; Update in place, preserving order
-          (setf (sheet-entry-title  existing) title
-                (sheet-entry-params existing) params)
+          (setf (sheet-entry-title     existing) title
+                (sheet-entry-render-fn existing) render
+                (sheet-entry-params    existing) params)
           (setf (spec-entry-sheets spec)
                 (append (spec-entry-sheets spec)
                         (list (make-sheet-entry :spec-name  spec-name
                                                 :sheet-name sheet-name
-                                                :title title
-                                                :params params))))))))
+                                                :title      title
+                                                :render-fn  render
+                                                :params     params))))))))
 
 ;; -------------------------------------------------------
 ;; Public macros
@@ -99,11 +102,18 @@ Example:
              (mode :type (member \"single\" \"multiple\") :default \"single\" ...)))"
   `(%register-spec ',name ,description ,component ,render ,props))
 
-(defmacro defsheet (spec-name sheet-name &key title params)
+(defmacro defsheet (spec-name sheet-name &key title render params)
   "Register a parameter variation (sheet) for a spec.
+If :render is omitted, the spec's own render function is used.
 
 Example:
   (defsheet accordion init
     :title \"Initially open\"
+    :params '(:default \"sbcl\"))
+
+  (defsheet accordion custom
+    :title \"Custom render\"
+    :render #'(lambda (&key default &allow-other-keys)
+                `(accordion (@ (default ,default)) ...))
     :params '(:default \"sbcl\"))"
-  `(%register-sheet ',spec-name ',sheet-name ,title ,params))
+  `(%register-sheet ',spec-name ',sheet-name ,title ,render ,params))

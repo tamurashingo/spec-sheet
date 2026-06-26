@@ -171,13 +171,11 @@
     (loop for (k v) on plist by #'cddr
           do (format out "&~(~A~)=~A" k (percent-encode (or v ""))))))
 
-(defun invoke-spec-render-sexp (spec params)
-  "Call SPEC's render-fn with PARAMS (a keyword plist). Returns an S-expression.
-The returned S-expression is embedded in the component's body and expanded
-by the outer render-component-html's expand-child-component machinery."
-  (when (and spec (spec-entry-render-fn spec))
+(defun invoke-render-sexp (render-fn params)
+  "Call RENDER-FN with PARAMS (a keyword plist). Returns an S-expression."
+  (when render-fn
     (handler-case
-        (apply (spec-entry-render-fn spec) (or params nil))
+        (apply render-fn (or params nil))
       (error (e)
         `(:div (@ (class "spec-preview-error"))
            "Render error: " ,(princ-to-string e))))))
@@ -379,14 +377,17 @@ by the outer render-component-html's expand-child-component machinery."
     (if (null spec)
         `(:div (@ (style "padding:16px;color:#999"))
            "No spec: " ,spec-name)
-        (let* ((render-params
-                (if (and sheet-name (not (string= sheet-name "")))
-                    ;; Sheet view: look up sheet and use its params
-                    (let ((sheet (find-sheet spec sheet-name)))
-                      (when sheet (sheet-entry-params sheet)))
+        (let* ((sheet (when (and sheet-name (not (string= sheet-name "")))
+                        (find-sheet spec sheet-name)))
+               (render-params
+                (if sheet
+                    ;; Sheet view: use sheet's params
+                    (sheet-entry-params sheet)
                     ;; Playground view: use props directly, excluding spec-name
                     (remove-from-plist all-props :spec-name :sheet-name)))
-               (component-sexp (invoke-spec-render-sexp spec render-params)))
+               (render-fn (or (when sheet (sheet-entry-render-fn sheet))
+                              (spec-entry-render-fn spec)))
+               (component-sexp (invoke-render-sexp render-fn render-params)))
           `(:div (@ (class "spec-preview-root"))
              ,component-sexp)))))
 

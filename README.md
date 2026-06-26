@@ -174,6 +174,7 @@ Registers a parameter variation for an existing spec.
 ```
 (defsheet spec-name sheet-name
   :title  string
+  :render lambda   ; optional
   :params plist)
 ```
 
@@ -182,6 +183,7 @@ Registers a parameter variation for an existing spec.
 | `spec-name` | The name passed to `defspec` |
 | `sheet-name` | A symbol identifying this sheet (e.g. `default`, `init`) |
 | `:title` | Human-readable title shown in the sidebar and panel header |
+| `:render` | Optional `lambda` taking the sheet's props as `&key` args, returning an S-expression. When omitted, the spec's `:render` is used. |
 | `:params` | A keyword plist of prop values (e.g. `'(:default "sbcl" :mode "multiple")`) |
 
 Sheets are displayed in declaration order. Re-evaluating with the same name updates the sheet in place.
