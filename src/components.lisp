@@ -127,6 +127,29 @@
     "background:#fef2f2;border-radius:4px;font-family:monospace;font-size:13px;}"))
 
 ;; -------------------------------------------------------
+;; URL sync: update browser URL when selected-spec/selected-sheet changes.
+;; Uses MutationObserver on data-state — no HTML-special characters (<>&).
+;; -------------------------------------------------------
+
+(defvar *url-sync-js*
+  (concatenate 'string
+    "(function(){"
+    "function syncUrl(state){"
+    "var s=state['SELECTED-SPEC']||'';"
+    "var sh=state['SELECTED-SHEET']||'';"
+    "var u=new URL(window.location.href);"
+    "if(s){u.searchParams.set('spec',s);}else{u.searchParams.delete('spec');}"
+    "if(sh){u.searchParams.set('sheet',sh);}else{u.searchParams.delete('sheet');}"
+    "history.replaceState(null,'',u.toString());}"
+    "new MutationObserver(function(ms){"
+    "ms.forEach(function(m){"
+    "if(m.attributeName==='data-state'){"
+    "if(m.target.getAttribute('data-component')==='spec-page'){"
+    "try{syncUrl(JSON.parse(m.target.getAttribute('data-state')||'{}'));}catch(e){}"
+    "}}});}).observe(document.body,{subtree:true,attributes:true,attributeFilter:['data-state']});"
+    "})();"))
+
+;; -------------------------------------------------------
 ;; Highlight.js initialization (inline — no HTML-special characters)
 ;; -------------------------------------------------------
 
@@ -156,7 +179,8 @@
        (:script (@ (src ,(asset-path "/script/lisp.js")))))
      (:body (@ (style "margin:0;padding:0"))
        ,children
-       (:script ,*hljs-init-js*))))
+       (:script ,*hljs-init-js*)
+       (:script ,*url-sync-js*))))
 
 ;; -------------------------------------------------------
 ;; Path prefix (set by configure-spec-sheet)
@@ -472,11 +496,15 @@ Custom pprint-dispatch entries:
 ;; Main spec-sheet UI: sidebar + content panel.
 ;; -------------------------------------------------------
 
-(define-component spec-page (&key &allow-other-keys)
+(define-component spec-page (&key (spec "") (sheet "") &allow-other-keys)
   (let-component-state
-      ((selected-spec          "")
-       (selected-sheet         "")
-       (playground-params-json "{}"))
+      ((selected-spec          (string-downcase (or spec "")))
+       (selected-sheet         (string-downcase (or sheet "")))
+       (playground-params-json
+        (if (string= (string-downcase (or sheet "")) "__playground__")
+            (let ((init-spec (find-spec (string-downcase (or spec "")))))
+              (if init-spec (jonathan:to-json (spec-default-params init-spec)) "{}"))
+            "{}")))
     (let-function
         ((select-spec (spec-name)
            (setf selected-spec          (string-downcase spec-name)
