@@ -61,8 +61,18 @@
     ".spec-sheet-preview-frame{"
     "width:100%;height:400px;border:none;display:block;}"
 
+    ;; Render source
+    ".spec-sheet-render-source{margin-top:8px;margin-bottom:24px;}"
+    ".spec-sheet-render-source h3{font-size:14px;font-weight:600;margin-bottom:12px;"
+    "color:var(--ss-muted,#71717a);text-transform:uppercase;letter-spacing:.05em;}"
+    ".spec-sheet-render-source pre{"
+    "background:var(--ss-code-bg,#f4f4f5);padding:12px 16px;"
+    "border-radius:6px;overflow-x:auto;"
+    "font-family:monospace;font-size:12px;line-height:1.6;"
+    "white-space:pre;}"
+
     ;; Params table
-    ".spec-sheet-params{margin-top:8px;}"
+    ".spec-sheet-params{margin-top:8px;margin-bottom:24px;}"
     ".spec-sheet-params h3{font-size:14px;font-weight:600;margin-bottom:12px;"
     "color:var(--ss-muted,#71717a);text-transform:uppercase;letter-spacing:.05em;}"
     ".spec-sheet-params-table{width:100%;border-collapse:collapse;font-size:13px;}"
@@ -117,6 +127,22 @@
     "background:#fef2f2;border-radius:4px;font-family:monospace;font-size:13px;}"))
 
 ;; -------------------------------------------------------
+;; Highlight.js initialization (inline — no HTML-special characters)
+;; -------------------------------------------------------
+
+(defvar *hljs-init-js*
+  (concatenate 'string
+    "(function(){"
+    "function h(){"
+    "document.querySelectorAll('pre code.language-commonlisp:not(.hljs)').forEach("
+    "function(e){hljs.highlightElement(e);});"
+    "}"
+    "if(document.readyState==='loading'){"
+    "document.addEventListener('DOMContentLoaded',h);}else{h();}"
+    "new MutationObserver(h).observe(document.body,{childList:true,subtree:true});"
+    "})();"))
+
+;; -------------------------------------------------------
 ;; Layout
 ;; -------------------------------------------------------
 
@@ -124,9 +150,13 @@
   `(:html (@ (lang "en"))
      (:head
        (:meta (@ (charset "UTF-8")))
-       (:title "spec-sheet"))
+       (:title "spec-sheet")
+       (:link (@ (rel "stylesheet") (href ,(asset-path "/css/github.css"))))
+       (:script (@ (src ,(asset-path "/script/highlight.min.js"))))
+       (:script (@ (src ,(asset-path "/script/lisp.js")))))
      (:body (@ (style "margin:0;padding:0"))
-       ,children)))
+       ,children
+       (:script ,*hljs-init-js*))))
 
 ;; -------------------------------------------------------
 ;; Path prefix (set by configure-spec-sheet)
@@ -179,6 +209,50 @@
       (error (e)
         `(:div (@ (class "spec-preview-error"))
            "Render error: " ,(princ-to-string e))))))
+
+(defun render-source-to-string (source)
+  "Pretty-print SOURCE as a lowercase string without package qualifiers.
+Custom pprint-dispatch entries:
+  symbol — prints symbol-name in lowercase, no package qualifier
+  lambda — keeps the arglist on the same line as lambda"
+  (when source
+    (let* ((table (copy-pprint-dispatch))
+           (*print-pretty* t)
+           (*print-pprint-dispatch* table))
+      ;; Symbols: lowercase, no package qualifier.
+      (set-pprint-dispatch 'symbol
+        (lambda (stream obj)
+          (when (keywordp obj) (write-char #\: stream))
+          (write-string (string-downcase (symbol-name obj)) stream))
+        1 table)
+      ;; Lambda: arglist stays on the same line as lambda regardless of length.
+      ;; Without this, the default pprint handler breaks the arglist onto a new
+      ;; line when it exceeds *print-right-margin*.
+      (set-pprint-dispatch '(cons (eql lambda) t)
+        (lambda (stream form)
+          (pprint-logical-block (stream form :prefix "(" :suffix ")")
+            (write-string "lambda" stream)
+            (write-char #\space stream)
+            ;; Disable right-margin for just the arglist so it never wraps.
+            (let ((*print-right-margin* most-positive-fixnum))
+              (write (cadr form) :stream stream))
+            (pprint-indent :block 2 stream)
+            (dolist (body-form (cddr form))
+              (pprint-newline :mandatory stream)
+              (write body-form :stream stream))))
+        1 table)
+      (with-output-to-string (out)
+        (write source :stream out)))))
+
+(defun render-render-source-block (spec sheet)
+  "Return a render-source code block, or nil if no source is available."
+  (let* ((source (or (sheet-entry-render-source sheet)
+                     (spec-entry-render-source spec)))
+         (str    (render-source-to-string source)))
+    (when str
+      `(:div (@ (class "spec-sheet-render-source"))
+         (:h3 "Render")
+         (:pre (:code (@ (class "language-commonlisp")) ,str))))))
 
 (defun render-sidebar (selected-spec selected-sheet)
   `(:nav (@ (class "spec-sheet-sidebar"))
@@ -315,7 +389,9 @@
        (:div (@ (class "spec-sheet-panel__preview"))
          (:iframe (@ (src ,preview-url)
                      (class "spec-sheet-preview-frame"))))
-       ,(render-params-table spec (sheet-entry-params sheet)))))
+       ,(render-params-table spec (sheet-entry-params sheet))
+       ,@(let ((block (render-render-source-block spec sheet)))
+           (when block (list block))))))
 
 (defun render-playground-panel (spec playground-params-json)
   (let* ((props  (spec-entry-props spec))

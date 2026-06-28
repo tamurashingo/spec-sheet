@@ -6,11 +6,16 @@ Registers two routes:
   PATH/          - main spec-sheet UI (spec-page component with spec-sheet-layout)
   PATH/preview/  - isolated component preview (spec-preview component, no layout)
 
+Also configures public/ in the spec-sheet system directory as the static asset
+directory, serving highlight.min.js and lisp.js from public/script/.
+
 Call this after defining your specs and before starting the server.
 
 Example:
   (configure-spec-sheet :path \"/spec-sheet\")"
   (setf *spec-sheet-path* path)
+  (configure-static-dir
+   (asdf:system-relative-pathname :spec-sheet "public/"))
   (configure-route :path path
                    :component "spec-page"
                    :props '()

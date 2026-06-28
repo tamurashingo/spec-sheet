@@ -9,6 +9,7 @@
   description   ; string
   component     ; function object
   render-fn     ; lambda (&key ...) => S-expression
+  render-source ; unevaluated render form for display
   props         ; list of (prop-name :type T :default V :description S)
   sheets)       ; ordered list of sheet-entry
 
@@ -17,6 +18,7 @@
   sheet-name    ; symbol
   title         ; string
   render-fn     ; lambda (&key ...) => S-expression, or nil to use spec's render-fn
+  render-source ; unevaluated render form for display, or nil to use spec's
   params)       ; plist e.g. '(:default "sbcl")
 
 (defvar *spec-registry* nil
@@ -42,27 +44,29 @@
           :key (lambda (s) (string-downcase (string (sheet-entry-sheet-name s))))
           :test #'string=)))
 
-(defun %register-spec (name description component render props)
+(defun %register-spec (name description component render render-source props)
   (let ((existing (find (string-downcase (string name)) *spec-registry*
                         :key (lambda (s) (string-downcase (string (spec-entry-name s))))
                         :test #'string=)))
     (if existing
         ;; Update in place, preserving list position; reset sheets
-        (setf (spec-entry-description existing) description
-              (spec-entry-component   existing) component
-              (spec-entry-render-fn   existing) render
-              (spec-entry-props       existing) props
-              (spec-entry-sheets      existing) nil)
+        (setf (spec-entry-description  existing) description
+              (spec-entry-component    existing) component
+              (spec-entry-render-fn    existing) render
+              (spec-entry-render-source existing) render-source
+              (spec-entry-props        existing) props
+              (spec-entry-sheets       existing) nil)
         (setf *spec-registry*
               (append *spec-registry*
-                      (list (make-spec-entry :name name
-                                             :description description
-                                             :component component
-                                             :render-fn render
-                                             :props props
-                                             :sheets nil)))))))
+                      (list (make-spec-entry :name          name
+                                             :description   description
+                                             :component     component
+                                             :render-fn     render
+                                             :render-source render-source
+                                             :props         props
+                                             :sheets        nil)))))))
 
-(defun %register-sheet (spec-name sheet-name title render params)
+(defun %register-sheet (spec-name sheet-name title render render-source params)
   (let ((spec (find (string-downcase (string spec-name)) *spec-registry*
                     :key (lambda (s) (string-downcase (string (spec-entry-name s))))
                     :test #'string=)))
@@ -74,16 +78,18 @@
                           :test #'string=)))
       (if existing
           ;; Update in place, preserving order
-          (setf (sheet-entry-title     existing) title
-                (sheet-entry-render-fn existing) render
-                (sheet-entry-params    existing) params)
+          (setf (sheet-entry-title         existing) title
+                (sheet-entry-render-fn     existing) render
+                (sheet-entry-render-source existing) render-source
+                (sheet-entry-params        existing) params)
           (setf (spec-entry-sheets spec)
                 (append (spec-entry-sheets spec)
-                        (list (make-sheet-entry :spec-name  spec-name
-                                                :sheet-name sheet-name
-                                                :title      title
-                                                :render-fn  render
-                                                :params     params))))))))
+                        (list (make-sheet-entry :spec-name     spec-name
+                                                :sheet-name    sheet-name
+                                                :title         title
+                                                :render-fn     render
+                                                :render-source render-source
+                                                :params        params))))))))
 
 ;; -------------------------------------------------------
 ;; Public macros
@@ -100,7 +106,7 @@ Example:
                 `(accordion (@ (default ,default) ...) ...))
     :props '((default :type string :default \"\" :description \"Initially open items\")
              (mode :type (member \"single\" \"multiple\") :default \"single\" ...)))"
-  `(%register-spec ',name ,description ,component ,render ,props))
+  `(%register-spec ',name ,description ,component ,render ',render ,props))
 
 (defmacro defsheet (spec-name sheet-name &key title render params)
   "Register a parameter variation (sheet) for a spec.
@@ -116,4 +122,4 @@ Example:
     :render #'(lambda (&key default &allow-other-keys)
                 `(accordion (@ (default ,default)) ...))
     :params '(:default \"sbcl\"))"
-  `(%register-sheet ',spec-name ',sheet-name ,title ,render ,params))
+  `(%register-sheet ',spec-name ',sheet-name ,title ,render ',render ,params))

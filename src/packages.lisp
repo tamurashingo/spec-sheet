@@ -7,7 +7,9 @@
                 #:define-layout
                 #:normalize-state-keys)
   (:import-from #:cl-s3r.server
-                #:configure-route)
+                #:configure-route
+                #:configure-static-dir
+                #:asset-path)
   (:import-from #:alexandria
                 #:remove-from-plist
                 #:make-keyword)
