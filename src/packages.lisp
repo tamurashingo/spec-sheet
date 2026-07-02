@@ -9,6 +9,7 @@
   (:import-from #:cl-s3r.server
                 #:configure-route
                 #:configure-static-dir
+                #:add-static-dir
                 #:asset-path)
   (:import-from #:alexandria
                 #:remove-from-plist
@@ -19,4 +20,7 @@
    #:configure-spec-sheet
    #:load-spec-file
    #:load-spec-directory
+   #:add-static-dir
+   #:add-head-element
+   #:*extra-head-nodes*
    #:*spec-registry*))

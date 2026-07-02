@@ -25,6 +25,16 @@ Example:
                    :props '()
                    :layout nil))
 
+(defun add-head-element (node)
+  "Append NODE to the list of extra <head> elements rendered by spec-sheet-layout.
+NODE must be a valid cl-s3r S-expression.
+
+Example:
+  (add-head-element
+    '(:link (@ (rel \"icon\") (type \"image/svg+xml\") (href \"/favicon.svg\"))))"
+  (setf *extra-head-nodes*
+        (append *extra-head-nodes* (list node))))
+
 (defun load-spec-file (path)
   "Load a spec definition file at PATH.
 The file should contain defspec/defsheet forms.

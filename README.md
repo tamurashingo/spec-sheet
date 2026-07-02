@@ -221,6 +221,45 @@ Loads a single file containing `defspec`/`defsheet` forms.
 
 Loads all `.lisp` files in `dir` (non-recursively) in alphabetical order.
 
+### `add-static-dir`
+
+```lisp
+(add-static-dir dir)
+```
+
+Registers an additional directory to serve static files from. Files are looked up in spec-sheet's own `public/` directory first, then each directory added via this function in the order they were added.
+
+Call this before `configure-spec-sheet` and `cl-s3r.server:run-server`.
+
+```lisp
+;; Serve files from ./public/ (e.g. ./public/favicon.svg, ./public/images/logo.png)
+(add-static-dir
+  (merge-pathnames "public/"
+    (uiop:pathname-directory-pathname *load-truename*)))
+```
+
+### `add-head-element`
+
+```lisp
+(add-head-element node)
+```
+
+Appends a cl-s3r S-expression node to the `<head>` of the spec-sheet HTML page. Use this to add favicons, custom stylesheets, or any other `<head>` element.
+
+Call this before `configure-spec-sheet`.
+
+```lisp
+;; Add an SVG favicon
+(add-head-element
+  '(:link (@ (rel "icon") (type "image/svg+xml") (href "/favicon.svg"))))
+
+;; Add a stylesheet
+(add-head-element
+  '(:link (@ (rel "stylesheet") (href "/css/my-theme.css"))))
+```
+
+Multiple calls append in order. The added elements appear after spec-sheet's own `<head>` entries. The list can also be set directly via `*extra-head-nodes*`.
+
 ## UI Overview
 
 ```

@@ -178,6 +178,11 @@
 ;; Layout
 ;; -------------------------------------------------------
 
+(defvar *extra-head-nodes* nil
+  "List of additional S-expression nodes to inject into <head>.
+Each element should be a valid cl-s3r S-expression, e.g.:
+  '(:link (@ (rel \"icon\") (type \"image/svg+xml\") (href \"/favicon.svg\")))")
+
 (define-layout spec-sheet-layout (&key children &allow-other-keys)
   `(:html (@ (lang "en"))
      (:head
@@ -186,7 +191,8 @@
        (:link (@ (rel "stylesheet") (href ,(asset-path "/css/github.css"))))
        (:script (@ (src ,(asset-path "/script/highlight.min.js"))))
        (:script (@ (src ,(asset-path "/script/lisp.js"))))
-       (:script (@ (src ,(asset-path "/script/resize.js")))))
+       (:script (@ (src ,(asset-path "/script/resize.js"))))
+       ,@*extra-head-nodes*)
      (:body (@ (style "margin:0;padding:0"))
        ,children
        (:script ,*hljs-init-js*)
