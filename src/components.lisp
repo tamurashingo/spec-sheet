@@ -9,10 +9,18 @@
     ".spec-sheet-root *{box-sizing:border-box;margin:0;padding:0;}"
     ".spec-sheet-root{"
     "display:grid;"
-    "grid-template-columns:var(--ss-sidebar-width,240px) 1fr;"
+    "grid-template-columns:var(--ss-sidebar-width,240px) 4px 1fr;"
     "height:100vh;overflow:hidden;"
     "font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;"
     "font-size:14px;color:var(--ss-text,#1a1a1a);}"
+
+    ;; Resize handle
+    ".spec-sheet-resize-handle{"
+    "width:4px;cursor:col-resize;background:transparent;"
+    "transition:background .15s;}"
+    ".spec-sheet-resize-handle:hover,"
+    ".spec-sheet-resize-handle--active{"
+    "background:var(--ss-accent,#3b82f6);}"
 
     ;; Sidebar
     ".spec-sheet-sidebar{"
@@ -177,7 +185,8 @@
        (:title "spec-sheet")
        (:link (@ (rel "stylesheet") (href ,(asset-path "/css/github.css"))))
        (:script (@ (src ,(asset-path "/script/highlight.min.js"))))
-       (:script (@ (src ,(asset-path "/script/lisp.js")))))
+       (:script (@ (src ,(asset-path "/script/lisp.js"))))
+       (:script (@ (src ,(asset-path "/script/resize.js")))))
      (:body (@ (style "margin:0;padding:0"))
        ,children
        (:script ,*hljs-init-js*)
@@ -529,4 +538,5 @@ Custom pprint-dispatch entries:
       `(:div (@ (class "spec-sheet-root"))
          (:style ,*spec-sheet-css*)
          ,(render-sidebar selected-spec selected-sheet)
+         (:div (@ (class "spec-sheet-resize-handle")))
          ,(render-main-panel selected-spec selected-sheet playground-params-json)))))
