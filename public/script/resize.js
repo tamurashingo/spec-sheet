@@ -1,13 +1,11 @@
 (function () {
-  document.addEventListener('DOMContentLoaded', function () {
-    var handle = document.querySelector('.spec-sheet-resize-handle');
-    if (!handle) return;
-    var root = document.querySelector('.spec-sheet-root');
-    if (!root) return;
+  var dragging = false;
+  var startX = 0;
+  var startWidth = 0;
 
-    var dragging = false;
-    var startX = 0;
-    var startWidth = 0;
+  function init(handle) {
+    var root = handle.closest('.spec-sheet-root');
+    if (!root) return;
 
     handle.addEventListener('mousedown', function (e) {
       dragging = true;
@@ -34,5 +32,23 @@
       document.body.style.cursor = '';
       document.body.style.userSelect = '';
     });
-  });
+  }
+
+  new MutationObserver(function (mutations, observer) {
+    for (var i = 0; i < mutations.length; i++) {
+      var nodes = mutations[i].addedNodes;
+      for (var j = 0; j < nodes.length; j++) {
+        var node = nodes[j];
+        if (node.nodeType !== 1) continue;
+        var handle = node.classList.contains('spec-sheet-resize-handle')
+          ? node
+          : node.querySelector('.spec-sheet-resize-handle');
+        if (handle) {
+          init(handle);
+          observer.disconnect();
+          return;
+        }
+      }
+    }
+  }).observe(document.body, { childList: true, subtree: true });
 })();
