@@ -34,21 +34,29 @@
     });
   }
 
-  new MutationObserver(function (mutations, observer) {
-    for (var i = 0; i < mutations.length; i++) {
-      var nodes = mutations[i].addedNodes;
-      for (var j = 0; j < nodes.length; j++) {
-        var node = nodes[j];
-        if (node.nodeType !== 1) continue;
-        var handle = node.classList.contains('spec-sheet-resize-handle')
-          ? node
-          : node.querySelector('.spec-sheet-resize-handle');
-        if (handle) {
-          init(handle);
-          observer.disconnect();
-          return;
+  function observe() {
+    new MutationObserver(function (mutations, observer) {
+      for (var i = 0; i < mutations.length; i++) {
+        var nodes = mutations[i].addedNodes;
+        for (var j = 0; j < nodes.length; j++) {
+          var node = nodes[j];
+          if (node.nodeType !== 1) continue;
+          var handle = node.classList.contains('spec-sheet-resize-handle')
+            ? node
+            : node.querySelector('.spec-sheet-resize-handle');
+          if (handle) {
+            init(handle);
+            observer.disconnect();
+            return;
+          }
         }
       }
-    }
-  }).observe(document.body, { childList: true, subtree: true });
+    }).observe(document.body, { childList: true, subtree: true });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', observe);
+  } else {
+    observe();
+  }
 })();
