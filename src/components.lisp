@@ -22,7 +22,8 @@
     ".spec-sheet-sidebar__header{"
     "padding:16px 12px 8px;font-weight:700;font-size:12px;"
     "letter-spacing:.06em;text-transform:uppercase;"
-    "color:var(--ss-muted,#71717a);border-bottom:1px solid var(--ss-border,#e4e4e7);}"
+    "color:var(--ss-muted,#71717a);border-bottom:1px solid var(--ss-border,#e4e4e7);"
+    "cursor:pointer;}"
     ".spec-sheet-sidebar__spec{padding:2px 0;}"
     ".spec-sheet-sidebar__spec-title{"
     "padding:6px 12px;cursor:pointer;font-weight:600;"
@@ -280,7 +281,8 @@ Custom pprint-dispatch entries:
 
 (defun render-sidebar (selected-spec selected-sheet)
   `(:nav (@ (class "spec-sheet-sidebar"))
-     (:div (@ (class "spec-sheet-sidebar__header"))
+     (:div (@ (class "spec-sheet-sidebar__header")
+              (onclick (select-spec "")))
        "spec-sheet")
      ,@(mapcar
          (lambda (spec)
